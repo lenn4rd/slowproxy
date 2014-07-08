@@ -29,15 +29,20 @@ function getDelay(request) {
 http.createServer(function (request, response) {
 	var delay = getDelay(request),
 		start = +(new Date()),
-		proxy = http.createClient(80, request.headers.host),
-		proxy_request = proxy.request(request.method, request.url, request.headers);
+		proxy = http.request({
+      host: request.headers.host,
+      port: (request.headers.port || 80),
+      method: request.method,
+      path: request.url,
+      headers: request.headers
+    });
 
 	//deal with errors, timeout, con refused, ...
 	proxy.on('error', function(err) {
 		util.log(err.toString() + " resource ("+request.url+") is not accessible on host \""+request.headers.host+"\"");
 	});
 
-	proxy_request.addListener('response', function (proxy_response) {
+	proxy.addListener('response', function (proxy_response) {
 		var buffer = [],
 			length = 0;
 
@@ -69,11 +74,11 @@ http.createServer(function (request, response) {
 
 	//proxies to SEND request to real server
 	request.addListener('data', function (chunk) {
-		proxy_request.write(chunk, 'binary');
+		proxy.write(chunk, 'binary');
 	});
 
 	request.addListener('end', function () {
-		proxy_request.end();
+		proxy.end();
 	});
 
 }).listen(process.env.VMC_APP_PORT || 1337);
